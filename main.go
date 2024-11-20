@@ -33,7 +33,7 @@ func main() {
 	bladeConfigs := []factory.BladeConfig{
 		{
 			Provider: types.AWS,
-			Region:   "us-east-1",
+			Region:   "eu-west-1", // Changed to eu-west-1 for your EC2 instances
 		},
 		// Add more blade configurations here as needed
 		// Example:

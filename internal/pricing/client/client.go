@@ -10,8 +10,8 @@ import (
 )
 
 const (
-    DefaultPricingRegion = "us-east-1"
-    BaseURL             = "https://pricing.%s.amazonaws.com/offers/v1.0/aws"
+    DefaultPricingRegion = "us-east-1"  // AWS Pricing API is only available in us-east-1
+    BaseURL             = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws"  // Always use us-east-1 for pricing
     IndexFile           = "index.json"
     CacheExpiration     = 24 * time.Hour
 )
@@ -19,7 +19,7 @@ const (
 // PricingClient handles AWS pricing API interactions
 type PricingClient struct {
     httpClient  *http.Client
-    region      string
+    region      string        // Target region for pricing lookups
     cache       map[string]map[string]*CachedResponse
     cacheMutex  sync.RWMutex
 }
@@ -73,33 +73,26 @@ func (c *PricingClient) GetServiceIndex() (*ServiceIndex, error) {
 
 // GetServicePricing retrieves pricing data for a specific service
 func (c *PricingClient) GetServicePricing(service, region string) ([]byte, error) {
+    // Get the service index first
     index, err := c.GetServiceIndex()
     if err != nil {
-        return nil, err
+        return nil, fmt.Errorf("failed to get service index: %w", err)
     }
 
-    offer, exists := index.Offers[service]
+    // Check if the service exists
+    serviceOffer, exists := index.Offers[service]
     if !exists {
         return nil, fmt.Errorf("service %s not found in pricing index", service)
     }
 
-    var pricingURL string
-    if region != "" {
-        regionURL, exists := offer.Regions[region]
-        if !exists {
-            return nil, fmt.Errorf("region %s not found for service %s", region, service)
-        }
-        pricingURL = regionURL
-    } else {
-        pricingURL = offer.CurrentRegionIndex
+    // Check if the region is supported
+    regionURL, exists := serviceOffer.Regions[region]
+    if !exists {
+        return nil, fmt.Errorf("region %s not supported for service %s", region, service)
     }
 
-    // Convert relative URL to absolute
-    if pricingURL[0] == '/' {
-        pricingURL = c.getBaseURL() + pricingURL
-    }
-
-    return c.fetchWithCache(pricingURL, region, service)
+    // Use the region-specific pricing URL
+    return c.fetchWithCache(regionURL, region, service)
 }
 
 func (c *PricingClient) fetchWithCache(url, region, service string) ([]byte, error) {
