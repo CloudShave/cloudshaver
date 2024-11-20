@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	awsblades "github.com/cloudshave/cloudshaver/internal/blades/aws"
+	awspricing "github.com/cloudshave/cloudshaver/internal/blades/aws/pricing"
 	"github.com/cloudshave/cloudshaver/internal/types"
 )
 
@@ -41,8 +42,14 @@ func createAWSBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, 
 	// Create EC2 client
 	ec2Client := ec2.NewFromConfig(cfg)
 
+	// Create pricing service
+	pricingService, err := awspricing.NewEC2PricingService(bladeConfig.Region)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create pricing service: %w", err)
+	}
+
 	// Create EC2 blade
-	blade, err := awsblades.NewEC2Blade(ec2Client, bladeConfig.Region)
+	blade, err := awsblades.NewEC2Blade(ec2Client, pricingService, bladeConfig.Region)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create EC2 blade: %w", err)
 	}

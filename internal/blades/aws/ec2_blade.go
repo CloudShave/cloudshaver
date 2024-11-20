@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	awspricing "github.com/cloudshave/cloudshaver/internal/pricing/aws"
+	awsinterfaces "github.com/cloudshave/cloudshaver/internal/aws/interfaces"
 	"github.com/cloudshave/cloudshaver/internal/types"
 	"github.com/sirupsen/logrus"
 )
@@ -32,17 +32,12 @@ var volumeUpgrades = map[string]string{
 }
 
 type EC2Blade struct {
-	ec2Client      *ec2.Client
-	pricingService *awspricing.EC2PricingService
+	ec2Client      awsinterfaces.EC2ClientAPI
+	pricingService awsinterfaces.PricingServiceAPI
 	region         string
 }
 
-func NewEC2Blade(ec2Client *ec2.Client, region string) (*EC2Blade, error) {
-	pricingService, err := awspricing.NewEC2PricingService(region)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create pricing service: %w", err)
-	}
-
+func NewEC2Blade(ec2Client awsinterfaces.EC2ClientAPI, pricingService awsinterfaces.PricingServiceAPI, region string) (*EC2Blade, error) {
 	return &EC2Blade{
 		ec2Client:      ec2Client,
 		pricingService: pricingService,
@@ -59,6 +54,9 @@ func (b *EC2Blade) GetCategory() string {
 }
 
 func (b *EC2Blade) Execute() (*types.BladeResult, error) {
+	// Log the region being analyzed
+	logrus.Infof("Starting EC2 analysis in region: %s", b.region)
+
 	// Collect all optimization results
 	result := &types.BladeResult{
 		CloudProvider:    string(types.AWS),
@@ -131,6 +129,18 @@ func (b *EC2Blade) analyzeUnderutilizedInstances() (float64, []string, error) {
 			instanceType := string(instance.InstanceType)
 			instanceID := *instance.InstanceId
 
+			// Get instance name from tags
+			instanceName := instanceID // Default to ID if no name tag
+			for _, tag := range instance.Tags {
+				if *tag.Key == "Name" {
+					instanceName = *tag.Value
+					break
+				}
+			}
+
+			// Log instance details
+			logrus.Infof("Found EC2 instance - Name: %s, ID: %s, Type: %s", instanceName, instanceID, instanceType)
+
 			// Check for instance type upgrade opportunities
 			if targetType, ok := instanceUpgrades[instanceType]; ok {
 				savings, err := b.pricingService.CalculateInstanceSavings(instanceType, targetType, b.region)
@@ -186,6 +196,19 @@ func (b *EC2Blade) analyzeStoppedInstances() (float64, []string, error) {
 		for _, instance := range reservation.Instances {
 			instanceID := *instance.InstanceId
 
+			// Get instance name from tags
+			instanceName := instanceID // Default to ID if no name tag
+			for _, tag := range instance.Tags {
+				if *tag.Key == "Name" {
+					instanceName = *tag.Value
+					break
+				}
+			}
+
+			// Log stopped instance details
+			logrus.Infof("Found stopped EC2 instance - Name: %s, ID: %s, Type: %s",
+				instanceName, instanceID, instance.InstanceType)
+
 			// Get all volumes attached to this instance
 			volumeInput := &ec2.DescribeVolumesInput{
 				Filters: []ec2types.Filter{
@@ -204,6 +227,19 @@ func (b *EC2Blade) analyzeStoppedInstances() (float64, []string, error) {
 
 			var instanceVolumeCost float64
 			for _, volume := range volumesOutput.Volumes {
+				// Get volume name from tags
+				volumeName := *volume.VolumeId // Default to volume ID
+				for _, tag := range volume.Tags {
+					if *tag.Key == "Name" {
+						volumeName = *tag.Value
+						break
+					}
+				}
+
+				// Log attached volume details
+				logrus.Infof("Found attached EBS volume - Name: %s, ID: %s, Type: %s, Size: %d GB, Instance: %s",
+					volumeName, *volume.VolumeId, volume.VolumeType, *volume.Size, instanceID)
+
 				if !b.pricingService.IsRegionSupported(b.region) {
 					log.Printf("Region %s not supported for pricing calculations", b.region)
 					continue
@@ -250,10 +286,26 @@ func (b *EC2Blade) analyzeUnattachedVolumes(ctx context.Context, volumes []ec2ty
 	var potentialSavings float64
 	var recommendations []string
 
+	// Log the start of volume analysis
+	logrus.Infof("Starting unattached EBS volume analysis in region: %s", b.region)
+
 	for _, volume := range volumes {
 		if volume.State != ec2types.VolumeStateAvailable {
 			continue
 		}
+
+		// Get volume name from tags
+		volumeName := *volume.VolumeId // Default to volume ID
+		for _, tag := range volume.Tags {
+			if *tag.Key == "Name" {
+				volumeName = *tag.Value
+				break
+			}
+		}
+
+		// Log unattached volume details
+		logrus.Infof("Found unattached EBS volume - Name: %s, ID: %s, Type: %s, Size: %d GB, State: %s",
+			volumeName, *volume.VolumeId, volume.VolumeType, *volume.Size, volume.State)
 
 		if !b.pricingService.IsRegionSupported(b.region) {
 			recommendations = append(recommendations,
