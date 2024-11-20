@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	awsblades "github.com/cloudshave/cloudshaver/internal/blades/aws"
+	awsinterfaces "github.com/cloudshave/cloudshaver/internal/interfaces/aws"
 	awspricing "github.com/cloudshave/cloudshaver/internal/pricing/aws"
 	"github.com/cloudshave/cloudshaver/internal/types"
 )
@@ -20,10 +21,24 @@ type BladeConfig struct {
 	// Add more configuration options as needed
 }
 
+// AWSClients contains the AWS service clients needed for blade creation
+type AWSClients struct {
+	EC2Client        awsinterfaces.EC2ClientAPI
+	RDSClient        awsinterfaces.RDSClientAPI
+	CloudWatchClient awsinterfaces.CloudWatchClientAPI
+	PricingService   awsinterfaces.PricingServiceAPI
+}
+
 // CreateBlade creates blade instances based on the provided configuration
-func CreateBlade(ctx context.Context, bladeConfig BladeConfig) ([]types.Blade, error) {
+func CreateBlade(ctx context.Context, bladeConfig BladeConfig, clients ...interface{}) ([]types.Blade, error) {
 	switch bladeConfig.Provider {
 	case types.AWS:
+		// If clients are provided, use them for testing
+		if len(clients) > 0 {
+			if awsClients, ok := clients[0].(AWSClients); ok {
+				return createAWSBladeWithClients(ctx, bladeConfig, awsClients)
+			}
+		}
 		return createAWSBlade(ctx, bladeConfig)
 	// case types.Azure:
 	// 	return createAzureBlade(ctx, bladeConfig)
@@ -56,14 +71,25 @@ func createAWSBlade(ctx context.Context, bladeConfig BladeConfig) ([]types.Blade
 		return nil, fmt.Errorf("failed to create pricing service: %w", err)
 	}
 
+	clients := AWSClients{
+		EC2Client:        ec2Client,
+		RDSClient:        rdsClient,
+		CloudWatchClient: cloudWatchClient,
+		PricingService:   pricingService,
+	}
+
+	return createAWSBladeWithClients(ctx, bladeConfig, clients)
+}
+
+func createAWSBladeWithClients(ctx context.Context, bladeConfig BladeConfig, clients AWSClients) ([]types.Blade, error) {
 	// Create EC2 blade
-	ec2Blade, err := awsblades.NewEC2Blade(ec2Client, pricingService, bladeConfig.Region)
+	ec2Blade, err := awsblades.NewEC2Blade(clients.EC2Client, clients.PricingService, bladeConfig.Region)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create EC2 blade: %w", err)
 	}
 
 	// Create RDS blade
-	rdsBlade, err := awsblades.NewRDSBlade(rdsClient, cloudWatchClient, pricingService, bladeConfig.Region)
+	rdsBlade, err := awsblades.NewRDSBlade(clients.RDSClient, clients.CloudWatchClient, clients.PricingService, bladeConfig.Region)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create RDS blade: %w", err)
 	}
