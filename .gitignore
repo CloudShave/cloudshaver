@@ -35,6 +35,8 @@ Thumbs.db
 # Project specific
 cloudshaver.exe
 cloudshaver
+cloudshave
+cloudshave.exe
 reports/
 *.report
 *.log
