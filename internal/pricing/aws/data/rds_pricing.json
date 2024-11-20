@@ -1,0 +1,64 @@
+{
+    "last_updated": "2024-01-15",
+    "region_mapping": {
+        "us-east-1": "US East (N. Virginia)",
+        "us-east-2": "US East (Ohio)",
+        "us-west-1": "US West (N. California)",
+        "us-west-2": "US West (Oregon)",
+        "eu-west-1": "EU (Ireland)",
+        "eu-central-1": "EU (Frankfurt)",
+        "ap-northeast-1": "Asia Pacific (Tokyo)",
+        "ap-southeast-1": "Asia Pacific (Singapore)",
+        "ap-southeast-2": "Asia Pacific (Sydney)"
+    },
+    "instance_prices": {
+        "us-east-1": {
+            "db.t3.micro:mysql:general-public-license": {
+                "instance_type": "db.t3.micro",
+                "engine": "mysql",
+                "license_model": "general-public-license",
+                "on_demand_price": 0.017,
+                "reserved_prices": {
+                    "1yr-no-upfront": {
+                        "upfront_fee": 0.0,
+                        "hourly_price": 0.011,
+                        "effective_price": 8.03
+                    },
+                    "1yr-partial-upfront": {
+                        "upfront_fee": 63.0,
+                        "hourly_price": 0.007,
+                        "effective_price": 5.11
+                    }
+                },
+                "storage_price": {
+                    "gp2_price": 0.115,
+                    "gp3_price": 0.095,
+                    "io_price": 0.125
+                }
+            },
+            "db.t4g.micro:mysql:general-public-license": {
+                "instance_type": "db.t4g.micro",
+                "engine": "mysql",
+                "license_model": "general-public-license",
+                "on_demand_price": 0.014,
+                "reserved_prices": {
+                    "1yr-no-upfront": {
+                        "upfront_fee": 0.0,
+                        "hourly_price": 0.009,
+                        "effective_price": 6.57
+                    },
+                    "1yr-partial-upfront": {
+                        "upfront_fee": 52.0,
+                        "hourly_price": 0.006,
+                        "effective_price": 4.38
+                    }
+                },
+                "storage_price": {
+                    "gp2_price": 0.115,
+                    "gp3_price": 0.095,
+                    "io_price": 0.125
+                }
+            }
+        }
+    }
+}

@@ -1,178 +1,86 @@
 package aws
 
 import (
-    "encoding/json"
-    "fmt"
-    "os"
-    "path/filepath"
-    "time"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 )
 
+// EC2Pricing holds pricing information for EC2 instances and EBS volumes
 type EC2Pricing struct {
-    LastUpdated         string                           `json:"last_updated"`
-    RegionMapping       map[string]string                `json:"region_mapping"`
-    OnDemandInstances   map[string]map[string]Instance   `json:"on_demand_instances"`
-    EBSVolumes         map[string]map[string]Volume     `json:"ebs_volumes"`
-    SavingsOpportunities SavingsOpportunities            `json:"savings_opportunities"`
+	RegionMapping map[string]map[string]InstancePricing
+	EBSVolumes    map[string]map[string]VolumePricing
+	dataDir       string
 }
 
-type Instance struct {
-    VCPU               int     `json:"vcpu"`
-    MemoryGiB         int     `json:"memory_gib"`
-    PricePerHour      float64 `json:"price_per_hour"`
-    RecommendedUpgrade string  `json:"recommended_upgrade,omitempty"`
-    RecommendedDowngrade string `json:"recommended_downgrade,omitempty"`
+// InstancePricing represents pricing information for an EC2 instance type
+type InstancePricing struct {
+	OnDemandPrice float64 `json:"onDemandPrice"`
 }
 
-type Volume struct {
-    PricePerGBMonth     float64 `json:"price_per_gb_month"`
-    BasePricePerMonth   float64 `json:"base_price_per_month,omitempty"`
-    IOPSIncluded        int     `json:"iops_included,omitempty"`
-    ThroughputIncluded  int     `json:"throughput_included_mibps,omitempty"`
-    PricePerIOPSMonth   float64 `json:"price_per_iops_month,omitempty"`
-    RecommendedUpgrade  string  `json:"recommended_upgrade,omitempty"`
+// VolumePricing represents pricing information for an EBS volume type
+type VolumePricing struct {
+	PricePerGBMonth float64 `json:"pricePerGBMonth"`
 }
 
-type SavingsOpportunities struct {
-    InstanceUpgrade struct {
-        T2ToT3 struct {
-            AverageSavingsPercentage float64 `json:"average_savings_percentage"`
-            Description             string  `json:"description"`
-        } `json:"t2_to_t3"`
-        Oversized struct {
-            CPUThresholdPercent    int     `json:"cpu_threshold_percent"`
-            MemoryThresholdPercent int     `json:"memory_threshold_percent"`
-            MinimumDays           int     `json:"minimum_days"`
-            Description           string  `json:"description"`
-        } `json:"oversized"`
-    } `json:"instance_upgrade"`
-    VolumeOptimization struct {
-        GP2ToGP3 struct {
-            MinimumSizeGB  int     `json:"minimum_size_gb"`
-            SavingsPerGB   float64 `json:"savings_per_gb"`
-            Description    string  `json:"description"`
-        } `json:"gp2_to_gp3"`
-        Unattached struct {
-            MinimumDays  int    `json:"minimum_days"`
-            Description string `json:"description"`
-        } `json:"unattached"`
-        Underutilized struct {
-            IOPSThreshold   int    `json:"iops_threshold"`
-            SizeThresholdGB int    `json:"size_threshold_gb"`
-            Description     string `json:"description"`
-        } `json:"underutilized"`
-    } `json:"volume_optimization"`
+// NewEC2Pricing creates a new EC2Pricing instance
+func NewEC2Pricing(dataDir string) *EC2Pricing {
+	return &EC2Pricing{
+		RegionMapping: make(map[string]map[string]InstancePricing),
+		EBSVolumes:    make(map[string]map[string]VolumePricing),
+		dataDir:       dataDir,
+	}
 }
 
-var pricingData *EC2Pricing
+// LoadPricing loads EC2 pricing data from JSON files
+func (p *EC2Pricing) LoadPricing() error {
+	// Load instance pricing
+	instanceData, err := os.ReadFile(filepath.Join(p.dataDir, "data", "ec2_pricing.json"))
+	if err != nil {
+		return fmt.Errorf("failed to read EC2 pricing data: %v", err)
+	}
 
-// LoadPricing loads the pricing data from the JSON file
-func LoadPricing() (*EC2Pricing, error) {
-    if pricingData != nil {
-        return pricingData, nil
-    }
+	if err := json.Unmarshal(instanceData, &p.RegionMapping); err != nil {
+		return fmt.Errorf("failed to parse EC2 pricing data: %v", err)
+	}
 
-    // Get the directory of the current file
-    dir, err := os.Getwd()
-    if err != nil {
-        return nil, fmt.Errorf("failed to get current directory: %v", err)
-    }
+	// Load EBS volume pricing
+	volumeData, err := os.ReadFile(filepath.Join(p.dataDir, "data", "ebs_pricing.json"))
+	if err != nil {
+		return fmt.Errorf("failed to read EBS pricing data: %v", err)
+	}
 
-    // Construct path to the pricing data file
-    pricingFile := filepath.Join(dir, "internal", "pricing", "aws", "data", "ec2_pricing.json")
-    data, err := os.ReadFile(pricingFile)
-    if err != nil {
-        return nil, fmt.Errorf("failed to read pricing data: %v", err)
-    }
+	if err := json.Unmarshal(volumeData, &p.EBSVolumes); err != nil {
+		return fmt.Errorf("failed to parse EBS pricing data: %v", err)
+	}
 
-    pricing := &EC2Pricing{}
-    if err := json.Unmarshal(data, pricing); err != nil {
-        return nil, fmt.Errorf("failed to parse pricing data: %v", err)
-    }
-
-    // Validate last updated date
-    lastUpdated, err := time.Parse("2006-01-02", pricing.LastUpdated)
-    if err != nil {
-        return nil, fmt.Errorf("invalid last_updated date format: %v", err)
-    }
-
-    // Warn if pricing data is older than 30 days
-    if time.Since(lastUpdated) > 30*24*time.Hour {
-        fmt.Printf("Warning: Pricing data is more than 30 days old (last updated: %s)\n", pricing.LastUpdated)
-    }
-
-    pricingData = pricing
-    return pricing, nil
+	return nil
 }
 
-// CalculateInstanceSavings calculates potential savings for an EC2 instance
-func (p *EC2Pricing) CalculateInstanceSavings(region, instanceType string, hoursRunning int) (float64, string, error) {
-    regionPricing, ok := p.OnDemandInstances[region]
-    if !ok {
-        return 0, "", fmt.Errorf("pricing not available for region: %s", region)
-    }
-
-    instance, ok := regionPricing[instanceType]
-    if !ok {
-        return 0, "", fmt.Errorf("pricing not available for instance type: %s", instanceType)
-    }
-
-    var savings float64
-    var recommendation string
-
-    // Check for T2 to T3 upgrade opportunity
-    if upgrade := instance.RecommendedUpgrade; upgrade != "" {
-        if upgradeInstance, ok := regionPricing[upgrade]; ok {
-            hourlyDiff := instance.PricePerHour - upgradeInstance.PricePerHour
-            savings = hourlyDiff * float64(hoursRunning)
-            recommendation = fmt.Sprintf("Upgrade to %s to save $%.2f per month", upgrade, savings*730) // 730 hours in a month
-        }
-    }
-
-    // Check for downsizing opportunity
-    if downgrade := instance.RecommendedDowngrade; downgrade != "" {
-        if downgradeInstance, ok := regionPricing[downgrade]; ok {
-            hourlyDiff := instance.PricePerHour - downgradeInstance.PricePerHour
-            downgradeSavings := hourlyDiff * float64(hoursRunning)
-            if downgradeSavings > savings {
-                savings = downgradeSavings
-                recommendation = fmt.Sprintf("Downgrade to %s to save $%.2f per month", downgrade, savings*730)
-            }
-        }
-    }
-
-    return savings, recommendation, nil
+// IsRegionSupported checks if pricing is supported for the given region
+func (p *EC2Pricing) IsRegionSupported(region string) bool {
+	_, ok := p.RegionMapping[region]
+	return ok
 }
 
-// CalculateVolumeSavings calculates potential savings for an EBS volume
-func (p *EC2Pricing) CalculateVolumeSavings(region string, volumeType string, sizeGB int, iops int) (float64, string, error) {
-    regionPricing, ok := p.EBSVolumes[region]
-    if !ok {
-        return 0, "", fmt.Errorf("pricing not available for region: %s", region)
-    }
+// CalculateInstanceSavings calculates potential savings when upgrading from one instance type to another
+func (p *EC2Pricing) CalculateInstanceSavings(currentType, targetType, region string) (float64, error) {
+	if !p.IsRegionSupported(region) {
+		return 0, fmt.Errorf("region %s is not supported", region)
+	}
 
-    volume, ok := regionPricing[volumeType]
-    if !ok {
-        return 0, "", fmt.Errorf("pricing not available for volume type: %s", volumeType)
-    }
+	currentPricing, ok := p.RegionMapping[region][currentType]
+	if !ok {
+		return 0, fmt.Errorf("no pricing data available for instance type %s", currentType)
+	}
 
-    var monthlySavings float64
-    var recommendation string
+	targetPricing, ok := p.RegionMapping[region][targetType]
+	if !ok {
+		return 0, fmt.Errorf("no pricing data available for instance type %s", targetType)
+	}
 
-    // Check for GP2 to GP3 migration opportunity
-    if volumeType == "gp2" && sizeGB >= p.SavingsOpportunities.VolumeOptimization.GP2ToGP3.MinimumSizeGB {
-        gp3Pricing := regionPricing["gp3"]
-        savingsPerGB := volume.PricePerGBMonth - gp3Pricing.PricePerGBMonth
-        monthlySavings = float64(sizeGB) * savingsPerGB
-        recommendation = fmt.Sprintf("Migrate to gp3 volume type to save $%.2f per month", monthlySavings)
-    }
-
-    // Check for over-provisioned IOPS
-    if (volumeType == "io1" || volumeType == "io2") && iops < p.SavingsOpportunities.VolumeOptimization.Underutilized.IOPSThreshold {
-        iopsPrice := volume.PricePerIOPSMonth * float64(iops)
-        recommendation = fmt.Sprintf("Consider reducing provisioned IOPS to save up to $%.2f per month", iopsPrice)
-        monthlySavings = iopsPrice
-    }
-
-    return monthlySavings, recommendation, nil
+	// Calculate monthly savings (assuming 720 hours per month)
+	monthlySavings := (currentPricing.OnDemandPrice - targetPricing.OnDemandPrice) * 720
+	return monthlySavings, nil
 }

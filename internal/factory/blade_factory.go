@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
 	awsblades "github.com/cloudshave/cloudshaver/internal/blades/aws"
 	awspricing "github.com/cloudshave/cloudshaver/internal/pricing/aws"
 	"github.com/cloudshave/cloudshaver/internal/types"
@@ -18,8 +20,8 @@ type BladeConfig struct {
 	// Add more configuration options as needed
 }
 
-// CreateBlade creates a blade instance based on the provided configuration
-func CreateBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, error) {
+// CreateBlade creates blade instances based on the provided configuration
+func CreateBlade(ctx context.Context, bladeConfig BladeConfig) ([]types.Blade, error) {
 	switch bladeConfig.Provider {
 	case types.AWS:
 		return createAWSBlade(ctx, bladeConfig)
@@ -32,7 +34,7 @@ func CreateBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, err
 	}
 }
 
-func createAWSBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, error) {
+func createAWSBlade(ctx context.Context, bladeConfig BladeConfig) ([]types.Blade, error) {
 	// Load AWS configuration
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(bladeConfig.Region))
 	if err != nil {
@@ -42,6 +44,12 @@ func createAWSBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, 
 	// Create EC2 client
 	ec2Client := ec2.NewFromConfig(cfg)
 
+	// Create RDS client
+	rdsClient := rds.NewFromConfig(cfg)
+
+	// Create CloudWatch client
+	cloudWatchClient := cloudwatch.NewFromConfig(cfg)
+
 	// Create pricing service
 	pricingService, err := awspricing.NewPricingService()
 	if err != nil {
@@ -49,20 +57,27 @@ func createAWSBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, 
 	}
 
 	// Create EC2 blade
-	blade, err := awsblades.NewEC2Blade(ec2Client, pricingService, bladeConfig.Region)
+	ec2Blade, err := awsblades.NewEC2Blade(ec2Client, pricingService, bladeConfig.Region)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create EC2 blade: %w", err)
 	}
 
-	return blade, nil
+	// Create RDS blade
+	rdsBlade, err := awsblades.NewRDSBlade(rdsClient, cloudWatchClient, pricingService, bladeConfig.Region)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create RDS blade: %w", err)
+	}
+
+	// Return the requested blades
+	return []types.Blade{ec2Blade, rdsBlade}, nil
 }
 
-// func createAzureBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, error) {
+// func createAzureBlade(ctx context.Context, bladeConfig BladeConfig) ([]types.Blade, error) {
 // 	// TODO: Implement Azure blade creation
 // 	return nil, fmt.Errorf("Azure blades not yet implemented")
 // }
 
-// func createGCPBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, error) {
+// func createGCPBlade(ctx context.Context, bladeConfig BladeConfig) ([]types.Blade, error) {
 // 	// TODO: Implement GCP blade creation
 // 	return nil, fmt.Errorf("GCP blades not yet implemented")
 // }

@@ -4,15 +4,15 @@ import (
 	"context"
 
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
 	awsinterfaces "github.com/cloudshave/cloudshaver/internal/interfaces/aws"
 )
 
-// NewEC2Client creates a new EC2 client that implements EC2ClientAPI
-func NewEC2Client(ctx context.Context, region string) (awsinterfaces.EC2ClientAPI, error) {
+// NewRDSClient creates a new RDS client that implements RDSClientAPI
+func NewRDSClient(ctx context.Context, region string) (awsinterfaces.RDSClientAPI, error) {
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
 		return nil, err
 	}
-	return ec2.NewFromConfig(cfg), nil
+	return rds.NewFromConfig(cfg), nil
 }

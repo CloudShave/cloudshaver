@@ -41,20 +41,26 @@ func main() {
 		Region:   region,
 	}
 
-	// Create blade
-	blade, err := factory.CreateBlade(ctx, bladeConfig)
+	// Create blades
+	blades, err := factory.CreateBlade(ctx, bladeConfig)
 	if err != nil {
-		logrus.Fatalf("Failed to create blade: %v", err)
+		logrus.Fatalf("Failed to create blades: %v", err)
 	}
 
-	// Execute blade analysis
-	result, err := blade.Execute()
-	if err != nil {
-		logrus.Fatalf("Failed to execute blade: %v", err)
+	// Execute all blades and collect results
+	var results []*types.BladeResult
+	for _, blade := range blades {
+		logrus.Infof("Executing blade: %s", blade.GetName())
+		result, err := blade.Execute()
+		if err != nil {
+			logrus.Errorf("Failed to execute blade %s: %v", blade.GetName(), err)
+			continue
+		}
+		results = append(results, result)
 	}
 
 	// Output results
-	outputJSON([]*types.BladeResult{result})
+	outputJSON(results)
 }
 
 func summarizeResults(results []*types.BladeResult) {
