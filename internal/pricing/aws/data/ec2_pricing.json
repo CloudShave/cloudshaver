@@ -1,0 +1,134 @@
+{
+    "last_updated": "2024-01-20",
+    "region_mapping": {
+        "us-east-1": "US East (N. Virginia)",
+        "us-east-2": "US East (Ohio)",
+        "us-west-1": "US West (N. California)",
+        "us-west-2": "US West (Oregon)",
+        "eu-west-1": "EU (Ireland)",
+        "eu-central-1": "EU (Frankfurt)"
+    },
+    "on_demand_instances": {
+        "us-east-1": {
+            "t2.micro": {
+                "vcpu": 1,
+                "memory_gib": 1,
+                "price_per_hour": 0.0116,
+                "recommended_upgrade": "t3.micro"
+            },
+            "t2.small": {
+                "vcpu": 1,
+                "memory_gib": 2,
+                "price_per_hour": 0.023,
+                "recommended_upgrade": "t3.small"
+            },
+            "t2.medium": {
+                "vcpu": 2,
+                "memory_gib": 4,
+                "price_per_hour": 0.0464,
+                "recommended_upgrade": "t3.medium"
+            },
+            "t3.micro": {
+                "vcpu": 2,
+                "memory_gib": 1,
+                "price_per_hour": 0.0104,
+                "recommended_downgrade": "t2.micro"
+            },
+            "t3.small": {
+                "vcpu": 2,
+                "memory_gib": 2,
+                "price_per_hour": 0.0208,
+                "recommended_downgrade": "t2.small"
+            },
+            "t3.medium": {
+                "vcpu": 2,
+                "memory_gib": 4,
+                "price_per_hour": 0.0416,
+                "recommended_downgrade": "t2.medium"
+            },
+            "m5.large": {
+                "vcpu": 2,
+                "memory_gib": 8,
+                "price_per_hour": 0.096,
+                "recommended_downgrade": "t3.medium"
+            },
+            "m5.xlarge": {
+                "vcpu": 4,
+                "memory_gib": 16,
+                "price_per_hour": 0.192,
+                "recommended_downgrade": "m5.large"
+            },
+            "c5.large": {
+                "vcpu": 2,
+                "memory_gib": 4,
+                "price_per_hour": 0.085,
+                "recommended_downgrade": "t3.medium"
+            },
+            "c5.xlarge": {
+                "vcpu": 4,
+                "memory_gib": 8,
+                "price_per_hour": 0.17,
+                "recommended_downgrade": "c5.large"
+            }
+        }
+    },
+    "ebs_volumes": {
+        "us-east-1": {
+            "gp2": {
+                "price_per_gb_month": 0.10,
+                "recommended_upgrade": "gp3"
+            },
+            "gp3": {
+                "price_per_gb_month": 0.08,
+                "base_price_per_month": 0.0,
+                "iops_included": 3000,
+                "throughput_included_mibps": 125
+            },
+            "io1": {
+                "price_per_gb_month": 0.125,
+                "price_per_iops_month": 0.065,
+                "recommended_upgrade": "io2"
+            },
+            "io2": {
+                "price_per_gb_month": 0.125,
+                "price_per_iops_month": 0.065
+            },
+            "st1": {
+                "price_per_gb_month": 0.045
+            },
+            "sc1": {
+                "price_per_gb_month": 0.015
+            }
+        }
+    },
+    "savings_opportunities": {
+        "instance_upgrade": {
+            "t2_to_t3": {
+                "average_savings_percentage": 10,
+                "description": "Upgrade to T3 instances for better price-performance ratio"
+            },
+            "oversized": {
+                "cpu_threshold_percent": 20,
+                "memory_threshold_percent": 30,
+                "minimum_days": 14,
+                "description": "Instance consistently using less resources than provisioned"
+            }
+        },
+        "volume_optimization": {
+            "gp2_to_gp3": {
+                "minimum_size_gb": 100,
+                "savings_per_gb": 0.02,
+                "description": "Migrate GP2 volumes to GP3 for better performance and lower cost"
+            },
+            "unattached": {
+                "minimum_days": 7,
+                "description": "Volume not attached to any instance"
+            },
+            "underutilized": {
+                "iops_threshold": 1000,
+                "size_threshold_gb": 100,
+                "description": "Volume provisioned with more IOPS or space than needed"
+            }
+        }
+    }
+}
