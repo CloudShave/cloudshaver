@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	awsinterfaces "github.com/cloudshave/cloudshaver/internal/aws/interfaces"
+	awsinterfaces "github.com/cloudshave/cloudshaver/internal/interfaces/aws"
 	"github.com/cloudshave/cloudshaver/internal/types"
 	"github.com/sirupsen/logrus"
 )
