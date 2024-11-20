@@ -118,6 +118,9 @@ CloudShaver is a cost optimization tool designed to analyze and recommend cost-s
 - Network Optimization
 - Resource Utilization
 
+## Development Note
+This project was fully created with AI assistance, leveraging advanced AI tools for development, testing, and documentation. This demonstrates the potential of AI-driven software development while maintaining high-quality standards and best practices.
+
 ## Getting Started
 1. Clone the repository
 2. Set up AWS credentials

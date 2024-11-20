@@ -39,3 +39,4 @@ reports/
 *.report
 *.log
 cloudshaver_report*
+.aws
