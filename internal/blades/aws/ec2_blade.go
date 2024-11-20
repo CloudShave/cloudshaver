@@ -282,7 +282,7 @@ func (b *EC2Blade) analyzeStoppedInstances() (float64, []string, error) {
 	return potentialSavings, recommendations, nil
 }
 
-func (b *EC2Blade) analyzeUnattachedVolumes(ctx context.Context, volumes []ec2types.Volume) (float64, []string, error) {
+func (b *EC2Blade) analyzeUnattachedVolumes(_ context.Context, volumes []ec2types.Volume) (float64, []string, error) {
 	var potentialSavings float64
 	var recommendations []string
 

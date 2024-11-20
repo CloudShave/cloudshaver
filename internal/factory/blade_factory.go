@@ -23,10 +23,10 @@ func CreateBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, err
 	switch bladeConfig.Provider {
 	case types.AWS:
 		return createAWSBlade(ctx, bladeConfig)
-	case types.Azure:
-		return createAzureBlade(ctx, bladeConfig)
-	case types.GCP:
-		return createGCPBlade(ctx, bladeConfig)
+	// case types.Azure:
+	// 	return createAzureBlade(ctx, bladeConfig)
+	// case types.GCP:
+	// 	return createGCPBlade(ctx, bladeConfig)
 	default:
 		return nil, fmt.Errorf("unsupported cloud provider: %s", bladeConfig.Provider)
 	}
@@ -57,12 +57,12 @@ func createAWSBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, 
 	return blade, nil
 }
 
-func createAzureBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, error) {
-	// TODO: Implement Azure blade creation
-	return nil, fmt.Errorf("Azure blades not yet implemented")
-}
+// func createAzureBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, error) {
+// 	// TODO: Implement Azure blade creation
+// 	return nil, fmt.Errorf("Azure blades not yet implemented")
+// }
 
-func createGCPBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, error) {
-	// TODO: Implement GCP blade creation
-	return nil, fmt.Errorf("GCP blades not yet implemented")
-}
+// func createGCPBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, error) {
+// 	// TODO: Implement GCP blade creation
+// 	return nil, fmt.Errorf("GCP blades not yet implemented")
+// }
