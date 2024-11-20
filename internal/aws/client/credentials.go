@@ -1,4 +1,4 @@
-package aws
+package awsclient
 
 import (
     "context"
@@ -19,6 +19,5 @@ func ValidateCredentials(ctx context.Context) error {
     if err != nil {
         return fmt.Errorf("invalid AWS credentials: %v", err)
     }
-
     return nil
 }

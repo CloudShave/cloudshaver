@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	awsblades "github.com/cloudshave/cloudshaver/internal/blades/aws"
-	awspricing "github.com/cloudshave/cloudshaver/internal/blades/aws/pricing"
+	awspricing "github.com/cloudshave/cloudshaver/internal/pricing/aws"
 	"github.com/cloudshave/cloudshaver/internal/types"
 )
 
@@ -43,7 +43,7 @@ func createAWSBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, 
 	ec2Client := ec2.NewFromConfig(cfg)
 
 	// Create pricing service
-	pricingService, err := awspricing.NewEC2PricingService(bladeConfig.Region)
+	pricingService, err := awspricing.NewPricingService()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pricing service: %w", err)
 	}
@@ -57,12 +57,12 @@ func createAWSBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, 
 	return blade, nil
 }
 
-func createAzureBlade(ctx context.Context, config BladeConfig) (types.Blade, error) {
+func createAzureBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, error) {
 	// TODO: Implement Azure blade creation
-	return nil, fmt.Errorf("azure blade creation not implemented")
+	return nil, fmt.Errorf("Azure blades not yet implemented")
 }
 
-func createGCPBlade(ctx context.Context, config BladeConfig) (types.Blade, error) {
+func createGCPBlade(ctx context.Context, bladeConfig BladeConfig) (types.Blade, error) {
 	// TODO: Implement GCP blade creation
-	return nil, fmt.Errorf("gcp blade creation not implemented")
+	return nil, fmt.Errorf("GCP blades not yet implemented")
 }

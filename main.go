@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/cloudshave/cloudshaver/internal/aws"
+	"github.com/cloudshave/cloudshaver/internal/aws/client"
 	"github.com/cloudshave/cloudshaver/internal/factory"
 	"github.com/cloudshave/cloudshaver/internal/types"
 	"github.com/sirupsen/logrus"
@@ -21,7 +21,7 @@ func main() {
 
 	// Validate AWS credentials before proceeding
 	ctx := context.Background()
-	if err := aws.ValidateCredentials(ctx); err != nil {
+	if err := awsclient.ValidateCredentials(ctx); err != nil {
 		logrus.Fatalf("AWS Credentials validation failed: %v\nPlease ensure valid AWS credentials are configured either through:\n"+
 			"1. AWS CLI credentials file (~/.aws/credentials)\n"+
 			"2. Environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)\n"+
@@ -29,91 +29,62 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Define blade configurations
-	bladeConfigs := []factory.BladeConfig{
-		{
-			Provider: types.AWS,
-			Region:   "eu-west-1", // Changed to eu-west-1 for your EC2 instances
-		},
-		// Add more blade configurations here as needed
-		// Example:
-		// {
-		//     Provider: types.Azure,
-		//     Region:   "eastus",
-		// },
+	// Default to us-east-1 if no region specified
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = "us-east-1"
 	}
 
-	// Initialize blades
-	var blades []types.Blade
-	for _, config := range bladeConfigs {
-		blade, err := factory.CreateBlade(ctx, config)
-		if err != nil {
-			logrus.WithError(err).Errorf("Failed to create blade for provider %s", config.Provider)
-			continue
-		}
-		blades = append(blades, blade)
+	// Create blade configuration
+	bladeConfig := factory.BladeConfig{
+		Provider: types.AWS,
+		Region:   region,
 	}
 
-	// Execute blades and collect results
-	var allResults []*types.BladeResult
+	// Create blade
+	blade, err := factory.CreateBlade(ctx, bladeConfig)
+	if err != nil {
+		logrus.Fatalf("Failed to create blade: %v", err)
+	}
 
-	for _, blade := range blades {
-		logrus.Infof("Executing blade: %s", blade.GetName())
-
-		result, err := blade.Execute()
-		if err != nil {
-			logrus.WithError(err).Errorf("Blade %s failed", blade.GetName())
-			continue
-		}
-
-		allResults = append(allResults, result)
+	// Execute blade analysis
+	result, err := blade.Execute()
+	if err != nil {
+		logrus.Fatalf("Failed to execute blade: %v", err)
 	}
 
 	// Output results
-	if len(allResults) > 0 {
-		summarizeResults(allResults)
-		outputJSON(allResults)
-	} else {
-		logrus.Info("No results were generated from any blades")
-	}
+	outputJSON([]*types.BladeResult{result})
 }
 
 func summarizeResults(results []*types.BladeResult) {
-	totalSavings := 0.0
-
-	// Pretty print results
-	fmt.Println("\n=== CloudShaver Cost Optimization Report ===")
-
+	var totalSavings float64
 	for _, result := range results {
 		totalSavings += result.PotentialSavings
-
-		fmt.Printf("\nBlade: %s\n", result.Category)
-		fmt.Printf("Cloud Provider: %s\n", result.CloudProvider)
+		fmt.Printf("\nBlade: %s\n", result.BladeName)
+		fmt.Printf("Category: %s\n", result.Category)
 		fmt.Printf("Potential Savings: $%.2f\n", result.PotentialSavings)
-
-		fmt.Println("Recommendations:")
-		for _, rec := range result.Recommendations {
-			fmt.Printf("- %s\n", rec)
+		fmt.Println("\nDetails:")
+		for _, detail := range result.Details {
+			fmt.Printf("- %s\n", detail)
 		}
 	}
-
 	fmt.Printf("\nTotal Potential Savings: $%.2f\n", totalSavings)
 }
 
 func outputJSON(results []*types.BladeResult) {
-	filename := fmt.Sprintf("cloudshaver_report_%s.json", time.Now().Format("20060102_150405"))
-
-	file, err := json.MarshalIndent(results, "", " ")
-	if err != nil {
-		logrus.WithError(err).Error("Failed to create JSON report")
-		return
+	output := struct {
+		Timestamp time.Time           `json:"timestamp"`
+		Results   []*types.BladeResult `json:"results"`
+	}{
+		Timestamp: time.Now(),
+		Results:   results,
 	}
 
-	err = os.WriteFile(filename, file, 0644)
+	jsonData, err := json.MarshalIndent(output, "", "  ")
 	if err != nil {
-		logrus.WithError(err).Error("Failed to write JSON report")
-		return
+		logrus.Fatalf("Failed to marshal results to JSON: %v", err)
 	}
 
-	logrus.Infof("Report saved to %s", filename)
+	fmt.Println(string(jsonData))
 }
