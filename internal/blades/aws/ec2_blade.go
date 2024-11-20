@@ -9,9 +9,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	awspricing "github.com/cloudshave/cloudshaver/internal/pricing/aws"
+	"github.com/cloudshave/cloudshaver/internal/types"
 	"github.com/sirupsen/logrus"
-	awspricing "github.com/yourusername/cloudshaver/internal/pricing/aws"
-	"github.com/yourusername/cloudshaver/internal/types"
 )
 
 // Instance type upgrade paths for cost optimization

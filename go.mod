@@ -1,4 +1,4 @@
-module github.com/yourusername/cloudshaver
+module github.com/cloudshave/cloudshaver
 
 go 1.21
 

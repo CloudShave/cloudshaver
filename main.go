@@ -7,10 +7,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/cloudshave/cloudshaver/internal/aws"
+	"github.com/cloudshave/cloudshaver/internal/factory"
+	"github.com/cloudshave/cloudshaver/internal/types"
 	"github.com/sirupsen/logrus"
-	"github.com/yourusername/cloudshaver/internal/aws"
-	"github.com/yourusername/cloudshaver/internal/factory"
-	"github.com/yourusername/cloudshaver/internal/types"
 )
 
 func main() {

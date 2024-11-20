@@ -6,8 +6,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	awsblades "github.com/yourusername/cloudshaver/internal/blades/aws"
-	"github.com/yourusername/cloudshaver/internal/types"
+	awsblades "github.com/cloudshave/cloudshaver/internal/blades/aws"
+	"github.com/cloudshave/cloudshaver/internal/types"
 )
 
 // BladeConfig represents the configuration for creating a blade
